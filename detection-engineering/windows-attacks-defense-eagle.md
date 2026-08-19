@@ -1,7 +1,6 @@
 # Active Directory Attack & Detection Assessment — EAGLE.LOCAL
 
-**Analyst:** [Your name]
-**Contact:** [your@email]
+**Analyst:** Carvajal-Hc
 **Version:** 2.0 (consolidated)
 **Classification:** Lab exercise — HTB Academy "Windows Attacks & Defense"
 
