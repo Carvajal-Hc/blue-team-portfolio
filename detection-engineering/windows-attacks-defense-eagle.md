@@ -4,7 +4,7 @@
 **Version:** 2.0 (consolidated)
 **Classification:** Lab exercise — HTB Academy "Windows Attacks & Defense"
 
-> **Confidentiality.** This report documents a security assessment performed on a controlled lab environment for training and to demonstrate defensive analysis capability. All systems, accounts, addresses, hashes, and SIDs are fictitious and do not correspond to any production infrastructure.
+**Confidentiality.** This report documents a security assessment performed on a controlled lab environment for training and to demonstrate defensive analysis capability. All systems, accounts, addresses, hashes, and SIDs are fictitious and do not correspond to any production infrastructure.
 
 ---
 
