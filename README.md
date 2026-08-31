@@ -25,13 +25,16 @@ The folder reflects the **discipline** of the work. Investigations with collecte
 
 Incident reconstruction from a provided evidence package. Each case follows the CDSA reporting structure: executive summary → technical analysis by phase → IoCs → MITRE mapping → recommendations → command appendix, with supporting screenshots.
 
-| Case | Difficulty | Attack | Key techniques | Report |
-|------|-----------|--------|----------------|--------|
-| **LogForge** | Medium | FileFix → ransomware | FileFix (T1204.004), masquerading, AutoIt, EDR/AV discovery, Startup persistence, `$MFT`-resident note recovery | [report](dfir/logforge-filefix/) |
-| **Campfire-1** | Very Easy | Kerberoasting | 4769/0x17, PowerView, Rubeus, workstation↔DC correlation | *see cheatsheet* |
-| **Campfire-2** | Very Easy | AS-REP Roasting | 4768/Pre-Auth 0, IP-correlation attribution, share access (5140) | *see cheatsheet* |
-| **Unit42** | Very Easy | Initial access (backdoor) | Sysmon EIDs, ProcessGuid pivot, masquerading, timestomp | *see cheatsheet* |
-| **BFT** | Very Easy | Delivery + stager | MFT forensics, `$SI` vs `$FN`, resident data, Zone.Identifier | *see cheatsheet* |
+| Case | Difficulty | Evidence | Attack | Key techniques | Report |
+|------|-----------|----------|--------|----------------|--------|
+| **LogForge** | Medium | KAPE triage (disk) | FileFix → ransomware | FileFix (T1204.004), masquerading, AutoIt, EDR/AV discovery, Startup persistence, `$MFT`-resident note recovery | [report](dfir/logforge-filefix/) |
+| **Recollection** | Easy | Physical memory image | Insecure malware handling → attempted exfiltration | PowerShell obfuscation via variable indexing, `-EncodedCommand`, LOLBin exfiltration over SMB, RedLine Stealer execution, typosquatted binary, console buffer recovery without plugin support | [report](dfir/recollection-memory/) |
+| **Campfire-1** | Very Easy | Event logs | Kerberoasting | 4769/0x17, PowerView, Rubeus, workstation↔DC correlation | *see cheatsheet* |
+| **Campfire-2** | Very Easy | Event logs | AS-REP Roasting | 4768/Pre-Auth 0, IP-correlation attribution, share access (5140) | *see cheatsheet* |
+| **Unit42** | Very Easy | Sysmon | Initial access (backdoor) | Sysmon EIDs, ProcessGuid pivot, masquerading, timestomp | *see cheatsheet* |
+| **BFT** | Very Easy | `$MFT` | Delivery + stager | MFT forensics, `$SI` vs `$FN`, resident data, Zone.Identifier | *see cheatsheet* |
+
+Each case works from a different evidence type — disk triage, memory image, event logs, endpoint telemetry, filesystem metadata — because the questions you can answer depend on what was collected, and the tooling changes with it.
 
 ---
 
@@ -44,6 +47,8 @@ Incident reconstruction from a provided evidence package. Each case follows the 
 ## Malware analysis
 
 *Static and dynamic analysis of malicious samples. (Coming soon.)*
+
+Partial coverage in the Recollection case: PE metadata extraction and imphash calculation on a binary reconstructed from the file cache, validated against public threat intelligence.
 
 ---
 
@@ -76,13 +81,15 @@ Every investigation is guided by the same analytical principles:
 - **The anomaly is in the distribution, not the volume** — what appears once and isolated, against the system's background noise.
 - **Pivot on unique identifiers** — `ProcessGuid`, `EntryNumber`, `Client Address`, SID read from source — rather than chasing event categories.
 - **Empirical validation of every finding** — the literal comes from the artifact, verified, never reconstructed from memory.
+- **An empty result is a hypothesis about the tool, not a conclusion about the data** — verify that a step produced output before interpreting the next one.
+- **Enumerate before filtering** — list the real values (table names, field names, directory contents) instead of guessing at a pattern that might not match.
 - **Attack ↔ defense bridge** — for each offensive technique, the Event ID, differentiating field, and detection query (SPL / PowerShell / KQL) that surfaces it in a SOC.
 
 ---
 
 ## Tooling
 
-**Zimmerman Tools** (EvtxECmd, MFTECmd, PECmd, RECmd, Registry Explorer, Timeline Explorer) · **KAPE** (triage) · **DB Browser for SQLite** (browser history) · **Chainsaw / Hayabusa** (Sigma-based triage) · **HxD** · **Volatility** (memory) · **Wireshark / Zeek / Suricata** (network) · **YARA / Sigma** (detection) · **Splunk** (SIEM)
+**Zimmerman Tools** (EvtxECmd, MFTECmd, PECmd, RECmd, Registry Explorer, Timeline Explorer) · **KAPE** (triage) · **Volatility 2 / 3** (memory) · **pefile** (PE metadata, imphash) · **DB Browser for SQLite / sqlite3** (browser artifacts) · **Chainsaw / Hayabusa** (Sigma-based triage) · **HxD** · **Wireshark / Zeek / Suricata** (network) · **YARA / Sigma** (detection) · **Splunk** (SIEM)
 
 ## Frameworks
 
@@ -91,3 +98,5 @@ Detections mapped to **MITRE ATT&CK**. Reports structured following the **Securi
 ---
 
 *Portfolio under active development. Discipline folders are added as the first case in each area is completed.*
+
+*Lab evidence packages (memory images, triage collections, malware samples) are not redistributed. Only analysis, screenshots of tool output, and derived indicators are published.*
