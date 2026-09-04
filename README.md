@@ -11,8 +11,6 @@ Preparation work for the **HTB Certified Defensive Security Analyst (CDSA)** cer
 ```
 blue-team-portfolio/
 ├── dfir/                    Incident investigations — full attack chains (CDSA report format)
-├── threat-hunting/          Proactive hunts and hypothesis-driven detection
-├── malware-analysis/        Static and dynamic analysis of malicious binaries
 ├── detection-engineering/   Sigma / YARA rules, SIEM queries, multi-technique assessments
 └── cheatsheets/             Cross-cutting reference — telemetry, tooling, detection signatures
 ```
@@ -29,10 +27,10 @@ Incident reconstruction from a provided evidence package. Each case follows the 
 |------|-----------|----------|--------|----------------|--------|
 | **LogForge** | Medium | KAPE triage (disk) | FileFix → ransomware | FileFix (T1204.004), masquerading, AutoIt, EDR/AV discovery, Startup persistence, `$MFT`-resident note recovery | [report](dfir/logforge-filefix/) |
 | **Recollection** | Easy | Physical memory image | Insecure malware handling → attempted exfiltration | PowerShell obfuscation via variable indexing, `-EncodedCommand`, LOLBin exfiltration over SMB, RedLine Stealer execution, typosquatted binary, console buffer recovery without plugin support | [report](dfir/recollection-memory/) |
-| **Campfire-1** | Very Easy | Event logs | Kerberoasting | 4769/0x17, PowerView, Rubeus, workstation↔DC correlation | *see cheatsheet* |
-| **Campfire-2** | Very Easy | Event logs | AS-REP Roasting | 4768/Pre-Auth 0, IP-correlation attribution, share access (5140) | *see cheatsheet* |
-| **Unit42** | Very Easy | Sysmon | Initial access (backdoor) | Sysmon EIDs, ProcessGuid pivot, masquerading, timestomp | *see cheatsheet* |
-| **BFT** | Very Easy | `$MFT` | Delivery + stager | MFT forensics, `$SI` vs `$FN`, resident data, Zone.Identifier | *see cheatsheet* |
+| **Campfire-1** | Very Easy | Event logs | Kerberoasting | 4769/0x17, PowerView, Rubeus, workstation↔DC correlation | [Kerberos cheatsheet](cheatsheets/kerberos-attacks-detection.md) |
+| **Campfire-2** | Very Easy | Event logs | AS-REP Roasting | 4768/Pre-Auth 0, IP-correlation attribution, share access (5140) | [Kerberos cheatsheet](cheatsheets/kerberos-attacks-detection.md) |
+| **Unit42** | Very Easy | Sysmon | Initial access (backdoor) | Sysmon EIDs, ProcessGuid pivot, masquerading, timestomp | [Sysmon cheatsheet](cheatsheets/sysmon-event-ids.md) |
+| **BFT** | Very Easy | `$MFT` | Delivery + stager | MFT forensics, `$SI` vs `$FN`, resident data, Zone.Identifier | [MFT cheatsheet](cheatsheets/mft-forensics.md) |
 
 Each case works from a different evidence type — disk triage, memory image, event logs, endpoint telemetry, filesystem metadata — because the questions you can answer depend on what was collected, and the tooling changes with it.
 
