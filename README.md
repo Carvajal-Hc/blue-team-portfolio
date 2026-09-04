@@ -27,12 +27,13 @@ Incident reconstruction from a provided evidence package. Each case follows the 
 |------|-----------|----------|--------|----------------|--------|
 | **LogForge** | Medium | KAPE triage (disk) | FileFix → ransomware | FileFix (T1204.004), masquerading, AutoIt, EDR/AV discovery, Startup persistence, `$MFT`-resident note recovery | [report](dfir/logforge-filefix/) |
 | **Recollection** | Easy | Physical memory image | Insecure malware handling → attempted exfiltration | PowerShell obfuscation via variable indexing, `-EncodedCommand`, LOLBin exfiltration over SMB, RedLine Stealer execution, typosquatted binary, console buffer recovery without plugin support | [report](dfir/recollection-memory/) |
+| **Streamer** | Hard | KAPE triage (disk) | Malvertising → trojanized installer → backdoor | SEO poisoning (T1583.008), typosquatted domain, USN Journal rename tracking, Zone.Identifier MotW recovery, Amcache hashing, scheduled task masquerading as a COM component, invalid-TLD sandbox check, S3 exfiltration | [report](dfir/streamer-malvertising/) |
 | **Campfire-1** | Very Easy | Event logs | Kerberoasting | 4769/0x17, PowerView, Rubeus, workstation↔DC correlation | [Kerberos cheatsheet](cheatsheets/kerberos-attacks-detection.md) |
 | **Campfire-2** | Very Easy | Event logs | AS-REP Roasting | 4768/Pre-Auth 0, IP-correlation attribution, share access (5140) | [Kerberos cheatsheet](cheatsheets/kerberos-attacks-detection.md) |
 | **Unit42** | Very Easy | Sysmon | Initial access (backdoor) | Sysmon EIDs, ProcessGuid pivot, masquerading, timestomp | [Sysmon cheatsheet](cheatsheets/sysmon-event-ids.md) |
 | **BFT** | Very Easy | `$MFT` | Delivery + stager | MFT forensics, `$SI` vs `$FN`, resident data, Zone.Identifier | [MFT cheatsheet](cheatsheets/mft-forensics.md) |
 
-Each case works from a different evidence type — disk triage, memory image, event logs, endpoint telemetry, filesystem metadata — because the questions you can answer depend on what was collected, and the tooling changes with it.
+The cases span different evidence types — disk triage, memory image, event logs, endpoint telemetry, filesystem metadata — because the questions you can answer depend on what was collected, and the tooling changes with it.
 
 ---
 
@@ -46,7 +47,7 @@ Each case works from a different evidence type — disk triage, memory image, ev
 
 *Static and dynamic analysis of malicious samples. (Coming soon.)*
 
-Partial coverage in the Recollection case: PE metadata extraction and imphash calculation on a binary reconstructed from the file cache, validated against public threat intelligence.
+Partial coverage in two cases: PE metadata extraction and imphash calculation on a binary reconstructed from the file cache (Recollection), and hash-based identification of a trojanized installer from Amcache without access to the sample (Streamer).
 
 ---
 
@@ -69,6 +70,7 @@ Per-technique and per-tool reference material — Event IDs, differentiating fie
 | [Kerberos Attack Detection](cheatsheets/kerberos-attacks-detection.md) | Kerberoasting (4769/0x17) + AS-REP Roasting (4768/Pre-Auth 0), attribution pivot, SIEM rules | Campfire-1, Campfire-2 |
 | [Sysmon Event IDs](cheatsheets/sysmon-event-ids.md) | Endpoint telemetry (EID 1/2/3/5/11/22), ProcessGuid pivot, attack→event mapping | Unit42 |
 | [MFT Forensics](cheatsheets/mft-forensics.md) | Timestomping (`$SI` vs `$FN`), resident data, Zone.Identifier, offset arithmetic | BFT |
+| [Windows Artifact Map](cheatsheets/windows-artifact-map.md) | Which artifact answers which question; `$J`, Prefetch, Amcache, shellbags; scheduled task and DNS-Client Event IDs; common failure modes | Streamer |
 
 ---
 
